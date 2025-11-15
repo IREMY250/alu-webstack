@@ -38,3 +38,4 @@ else
     # Only check the provided subdomain
     get_record "$domain" "$subdomain"
 fi
+
