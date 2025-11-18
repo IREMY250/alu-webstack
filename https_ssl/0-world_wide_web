@@ -1,41 +1,28 @@
 #!/usr/bin/env bash
-# Ignore SC2086 as requested
-# shellcheck disable=SC2086
+# Script that displays information about subdomains
 
-# ---------------------------
-# Function: get_record
-# Params: domain, subdomain
-# Description:
-#   Performs dig lookup and prints the required output
-# ---------------------------
-get_record() {
+get_subdomain_info() {
     local domain=$1
-    local subd=$2
-    full="${subd}.${domain}"
-
-    # Run dig, extract ANSWER SECTION, use awk to get record + destination
-    output=$(dig $full | grep -A1 "ANSWER SECTION:" | tail -n1)
-
-    # Use awk to parse:
-    # $4 = record type
-    # $5 = destination
-    record_type=$(echo "$output" | awk '{print $4}')
-    destination=$(echo "$output" | awk '{print $5}')
-
-    echo "The subdomain ${subd} is a ${record_type} record and points to ${destination}"
+    local subdomain=$2
+    local result=$(dig "$subdomain.$domain" | grep -A1 'ANSWER SECTION:' | tail -n1)
+    local record_type=$(echo "$result" | awk '{print $4}')
+    local destination=$(echo "$result" | awk '{print $5}')
+    
+    if [ -n "$destination" ]; then
+        echo "The subdomain $subdomain is a $record_type record and points to $destination"
+    fi
 }
 
-domain=$1
-subdomain=$2
-
-# If only domain is provided → check all required subdomains in this specific order
-if [ -z "$subdomain" ]; then
-    for s in www lb-01 web-01 web-02
-    do
-        get_record "$domain" "$s"
-    done
-else
-    # Only check the provided subdomain
-    get_record "$domain" "$subdomain"
+if [ $# -eq 1 ]; then
+    # Only domain provided, check all default subdomains
+    domain=$1
+    get_subdomain_info "$domain" "www"
+    get_subdomain_info "$domain" "lb-01"
+    get_subdomain_info "$domain" "web-01"
+    get_subdomain_info "$domain" "web-02"
+elif [ $# -eq 2 ]; then
+    # Domain and subdomain provided
+    domain=$1
+    subdomain=$2
+    get_subdomain_info "$domain" "$subdomain"
 fi
-
